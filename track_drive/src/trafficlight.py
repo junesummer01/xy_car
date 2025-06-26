@@ -12,8 +12,8 @@ Yellow = (0,255,255) # 노란색
 #=============================================
 # 신호등의 파란불을 체크해서 True/False 값을 반환하는 함수
 #=============================================
-def check_traffic_sign(image):
-    MIN_RADIUS, MAX_RADIUS = 15, 25
+def check_traffic_light(image):
+    MIN_RADIUS, MAX_RADIUS = 20, 25
     
     # 원본이미지를 복제한 후에 특정영역(ROI Area)을 잘라내기
     cimg = image.copy()
@@ -45,7 +45,7 @@ def check_traffic_sign(image):
     
         # 정수값으로 바꾸고 발견된 원의 개수를 출력
         circles = np.round(circles[0, :]).astype("int")
-        print("\nFound",len(circles),"circles")
+        #print("Found",len(circles),"circles")
         
         # 중심의 Y좌표값 순서대로 소팅해서 따로 저장
         y_circles = sorted(circles, key=lambda circle: circle[1])
@@ -70,7 +70,7 @@ def check_traffic_sign(image):
             # 밝기 값은 반올림해서 10의 자리수로 만들어 사용
             mean_value = round(np.mean(roi),-1)
             brightness_values.append(mean_value)
-            print(f"Circle {i} at ({x},{y}), radius={r}: brightness={mean_value}")
+            #print(f"Circle {i} at ({x},{y}), radius={r}: brightness={mean_value}")
 			                
             # 원의 밝기를 계산했던 사각형 영역을 빨간색으로 그리기 
             cv2.rectangle(cimg, ((x-(r//2))+Center_X-XX, (y-(r//2))+Center_Y-YY),
@@ -81,7 +81,19 @@ def check_traffic_sign(image):
         brightest_circle = circles[brightest_idx]
         x, y, r = brightest_circle
 
-        print(f" --- Circle {brightest_idx} is the brightest.")
+        # 밝기 차이 조건 추가
+        BRIGHTNESS_THRESHOLD = 30  # 밝기 차이 기준값 (조정 가능)
+        others = [v for i, v in enumerate(brightness_values) if i != brightest_idx]
+        average_other_brightness = np.mean(others)
+        brightness_diff = brightness_values[brightest_idx] - average_other_brightness
+        #print(f"Brightness difference from others: {brightness_diff}")
+
+        # 일정 밝기 차이 이상이어야 신호등으로 인정
+        if brightness_diff < BRIGHTNESS_THRESHOLD:
+            #print("Brightness difference too small. Ignoring detection.")
+            return False, 'Black'
+
+        #print(f" --- Circle {brightest_idx} is the brightest.")
         cv2.circle(cimg,(x+Center_X-XX,y+Center_Y-YY),r,Yellow,2)
             
         # 신호등 찾기 결과가 표시된 이미지를 화면에 출력
@@ -93,6 +105,9 @@ def check_traffic_sign(image):
         #  (2)제일 왼쪽과 제일 오른쪽에 있는 2개 원의 X좌표값 차이가 크면 안됨  
         #  (3)원들이 좌우로 너무 붙어 있으면 안됨 
        
+
+        print(f"Found 3 circles. Brightness: {brightness_values}")
+
         colors = ['Red', 'Yellow', 'Blue']
         return True, colors[brightest_idx]
       
@@ -100,6 +115,6 @@ def check_traffic_sign(image):
     cv2.imshow('Circles Detected', cimg)
     
     # 원본 이미지에서 원이 발견되지 않았다면 False 리턴   
-    #print("Can't find Traffic Sign...!")
+    #print("Can't find Traffic Light...!")
     return False, 'Black'
     

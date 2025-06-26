@@ -14,7 +14,6 @@ ROI_START_ROW = 300  # 차선을 찾을 ROI 영역의 시작 Row값
 ROI_END_ROW = 380  # 차선을 찾을 ROT 영역의 끝 Row값
 ROI_HEIGHT = ROI_END_ROW - ROI_START_ROW  # ROI 영역의 세로 크기  
 L_ROW = 40  # 차선의 위치를 찾기 위한 ROI 안에서의 기준 Row값 
-TOLERANCE = 50  # 허용 범위 설정 (예: 50픽셀)
 prev_x_left, prev_x_right = 100, 540
 View_Center = WIDTH//2  # 화면의 중앙값 = 카메라 위치
 Blue =  (255,0,0) # 파란색
@@ -206,7 +205,6 @@ def lane_detect(img):
     #   (직선의 방정식) y = (m_right)x + (b_right)
     # 기준선(수평선)과 대표직선과의 교점인 x_left와 x_right를 찾음.
     #=========================================
-    x_left, x_right = 100, 540
 
     #=========================================        
     # 대표직선의 기울기 값이 0.0이라는 것은 직선을 찾지 못했다는 의미임
@@ -242,38 +240,34 @@ def lane_detect(img):
     # 대표직선의 기울기 값이 0.0이라는 것은 직선을 찾지 못했다는 의미임
     # 이 경우에 반대쪽 차선의 위치 정보를 이용해서 내 위치값을 정함 
     #=========================================
-    if m_left == 0.0 and m_right != 0.0:
-        x_left = x_right - 380
-
     if m_left != 0.0 and m_right == 0.0:
-        x_right = x_left + 380
+        x_right = x_left + 300
 
+    elif m_left == 0.0 and m_right != 0.0:
+        x_left = x_right - 300
+        
+    elif m_left == 0.0 and m_right == 0.0:
+        x_left = prev_x_left
+        x_right = prev_x_right
 
+    #==================================================
+    # 새로운 값이 이전 값과의 차이가 허용 범위를 초과할 경우 이전 값을 유지
+    #==================================================
+    TOLERANCE = 200  # 허용 범위 설정 (예: 200픽셀)
+    
+    '''		     
+    if abs(x_left - prev_x_left) > TOLERANCE:
+        x_left = prev_x_left
+
+    if abs(x_right - prev_x_right) > TOLERANCE:
+        x_right = prev_x_right
+    '''
 
     #==================================================
     # 이번에 구한 값으로 예전 값을 업데이트 함			
     #==================================================
     prev_x_left = x_left
     prev_x_right = x_right
-
-    #==================================================
-    # 새로운 값이 이전 값과의 차이가 허용 범위를 초과할 경우 이전 값을 유지
-    #==================================================
-    '''		     
-    if abs(x_left - prev_x_left) > TOLERANCE:
-        x_left = prev_x_left
-    else:
-        # 차이가 허용 범위 내일 경우 새 값으로 업데이트
-        prev_x_left = x_left  
-
-    if abs(x_right - prev_x_right) > TOLERANCE:
-        x_right = prev_x_right
-    else:
-        # 차이가 허용 범위 내일 경우 새 값으로 업데이트
-        prev_x_right = x_right  
-    '''
-
-
 
     # 왼쪽 차선의 위치와 오른쪽 차선의 위치의 중간 위치를 구함
     x_midpoint = (x_left + x_right) // 2 
@@ -299,4 +293,3 @@ def lane_detect(img):
 
     return True, x_left, x_right
 
-#===============
