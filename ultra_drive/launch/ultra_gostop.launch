@@ -1,0 +1,13 @@
+<launch>
+
+  <!-- Motor node -->
+  <include file="$(find xycar_motor)/launch/xycar_motor.launch" />
+
+  <!-- Ultrasonic sensor node -->
+  <include file="$(find xycar_ultrasonic)/launch/xycar_ultrasonic.launch" />
+
+  <!-- ultra_drive node -->
+  <node name="ultra_driver" pkg="ultra_drive" type="ultra_gostop.py" output="screen"/>
+  
+</launch>
+

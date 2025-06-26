@@ -1,0 +1,25 @@
+<launch> 
+
+  <!-- Motor node -->
+  <include file="$(find xycar_motor)/launch/xycar_motor.launch" />
+
+  <!-- Ultrasonic sensor node -->
+  <include file="$(find xycar_ultrasonic)/launch/xycar_ultrasonic.launch" />
+
+  <!-- USB Camera node -->
+  <include file="$(find usb_cam)/launch/xycar_cam.launch" />
+
+  <!-- AR_TRACK_ALVAR node -->
+  <node name="ar_track_alvar" pkg="ar_track_alvar" type="individualMarkersNoKinect" respawn="false" output="screen">
+    <param name="marker_size"           type="double" value="9.0" />
+    <param name="max_new_marker_error"  type="double" value="0.05" />
+    <param name="max_track_error"       type="double" value="0.05" />
+    <param name="output_frame"          type="string" value="usb_cam" />
+    <remap from="camera_image"  to="/usb_cam/image_raw" />
+    <remap from="camera_info"   to="/usb_cam/camera_info" />
+  </node>
+  
+  <!-- My Driver node -->
+  <node name="driver" pkg="track_drive" type="track_drive_camp.py" output="screen" />
+  
+</launch>

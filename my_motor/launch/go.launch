@@ -1,0 +1,9 @@
+<launch>
+
+  <!-- motor node -->
+  <include file="$(find xycar_motor)/launch/xycar_motor.launch" />
+
+  <!-- auto driver -->
+  <node name="driver" pkg="my_motor" type="go.py" output="screen"/>
+
+</launch>

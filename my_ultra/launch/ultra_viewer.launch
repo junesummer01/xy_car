@@ -1,0 +1,9 @@
+<launch>
+ 
+  <!-- Ultrasonic node -->
+  <include file="$(find xycar_ultrasonic)/launch/xycar_ultrasonic.launch" />
+
+  <!-- Viewer node -->
+  <node name="ultra_viewer" pkg="my_ultra" type="ultra_viewer.py" output="screen"/>
+  
+</launch>

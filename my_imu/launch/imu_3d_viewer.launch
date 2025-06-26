@@ -1,0 +1,8 @@
+<launch>
+
+  <!-- IMU node -->
+  <include file="$(find xycar_imu)/launch/xycar_imu.launch" />
+
+  <node pkg="my_imu" type="imu_3d_viewer.py" name="IMU_Viewer" output="screen" />
+
+</launch>

@@ -1,0 +1,37 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
+import rospy, math
+from xycar_msgs.msg import xycar_motor
+from sensor_msgs.msg import LaserScan
+
+motor_msg = xycar_motor()
+ranges = None
+
+def callback(msg): 
+    global ranges
+    ranges = msg.ranges
+
+rospy.init_node('driver')
+motor_pub = rospy.Publisher('xycar_motor', xycar_motor, queue_size=1)
+rospy.Subscriber('scan', LaserScan, callback)
+
+rate = rospy.Rate(5)
+
+while not rospy.is_shutdown():
+
+    while ranges is None:
+        continue
+
+    R = ranges[440]  
+    L = ranges[64] 
+    print(R,L)
+    Q = R - L
+
+    angle = 0
+    motor_msg.angle = angle
+    motor_msg.speed = 10
+    
+    motor_pub.publish(motor_msg)
+    rate.sleep()
+

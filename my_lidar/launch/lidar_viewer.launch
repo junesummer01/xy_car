@@ -1,0 +1,8 @@
+<launch>
+ 
+  <!-- Lidar node -->
+  <include file="$(find xycar_lidar)/launch/xycar_lidar.launch" />
+
+  <node name="lidar_viewer" pkg="my_lidar" type="lidar_viewer.py" output="screen"/>
+  
+</launch>

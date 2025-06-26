@@ -1,0 +1,8 @@
+<launch>
+
+  <!-- USB Camera node -->
+  <include file="$(find usb_cam)/launch/xycar_cam.launch" />
+  
+  <node name="my_cam" pkg="my_cam" type="edge_cam.py" output="screen"/>
+  
+</launch>
