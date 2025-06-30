@@ -1,0 +1,15 @@
+<launch>
+
+  <!-- Motor node -->
+  <include file="$(find xycar_motor)/launch/xycar_motor.launch" />
+
+  <!-- USB Camera node -->
+  <include file="$(find usb_cam)/launch/xycar_cam.launch" />
+
+   <!-- Ultrasonic sensor node -->
+  <include file="$(find xycar_ultrasonic)/launch/xycar_ultrasonic.launch" />
+
+  <node name="driver" pkg="my_traffic" type="main.py" output="screen"/>
+  
+</launch>
+

@@ -14,7 +14,7 @@ from cv_bridge import CvBridge
 from xycar_msgs.msg import xycar_motor
 
 motor = None  # 모터 노드 변수
-Fix_Speed = 15  # 모터 속도 고정 상수값 
+Fix_Speed = 15  # 모터 속도 고정 상수값
 new_angle = 0  # 모터 조향각 초기값
 new_speed = Fix_Speed  # 모터 속도 초기값
 
@@ -105,7 +105,7 @@ def start():
     rospy.init_node('Driver')
     motor = rospy.Publisher('xycar_motor', xycar_motor, queue_size=1)
     rospy.Subscriber("/usb_cam/image_raw/",Image,usbcam_callback, queue_size=1)
-
+    
     rospy.wait_for_message("/usb_cam/image_raw/", Image)
     print("Camera Ready --------------")
 

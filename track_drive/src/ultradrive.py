@@ -50,25 +50,41 @@ def sonic_drive(ultra_msg, orig_angle):
         # 직선 또는 완만한 곡선 → 양쪽 센서 비교
         print("valid_left and valid_right")
         #print(f"Left: {count} -- Right: {right}") 
-        angle = (right - left) * k
+        if min(left,right) < 10:
+            speed = 3
+            angle = (right - left) * k * 5
+        else:
+            speed = 30
+            angle = (right - left) * k
 
     elif valid_left and not valid_right:
         # 오른쪽이 트여 있음 → 우회전 중 → 왼쪽 라바콘 거리만 감시
         print("valid_left and NOT valid_right")
         ideal_left = 50.0
         #print(f"Left: {count} -- Right: {right}") 
-        angle = (ideal_left - left) * k
+        if left < 10:
+            speed = 3
+            angle = (ideal_left - left) * k * 5
+        else:
+            speed = 30
+            angle = (ideal_left - left) * k
 
     elif not valid_left and valid_right:
         # 왼쪽이 트여 있음 → 좌회전 중 → 오른쪽 라바콘 거리만 감시
         print("NOT valid_left and valid_right")
         ideal_right = 50.0
-        angle = (right - ideal_right) * k
+        if right < 10:
+            speed = 3
+            angle = (right - ideal_right) * k * 5
+        else:
+            speed = 30
+            angle = (right - ideal_right) * k
 
     else:
         # 둘 다 무효 → 최근 방향 유지
         print("NOT both")
         angle = orig_angle
+        speed = 3
 
     angle = max(min(angle, 100.0), -100.0)
-    return angle
+    return angle, speed

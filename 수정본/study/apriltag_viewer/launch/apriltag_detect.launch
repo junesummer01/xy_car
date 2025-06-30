@@ -1,0 +1,9 @@
+<launch>
+
+  <!-- USB Camera node -->
+  <include file="$(find usb_cam)/launch/xycar_cam.launch" />  -->
+
+  <!-- AprilTag Detector node --> 
+  <node name="Detector" pkg="apriltag_viewer" type="apriltag_detect.py" output="screen" />
+
+</launch>

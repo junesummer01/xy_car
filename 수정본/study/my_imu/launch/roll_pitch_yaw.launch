@@ -1,0 +1,8 @@
+<launch>
+
+  <!-- IMU node -->
+  <include file="$(find xycar_imu)/launch/xycar_imu.launch" />
+
+  <node pkg="my_imu" type="roll_pitch_yaw.py" name="Imu_Print" output="screen" />
+
+</launch>

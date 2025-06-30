@@ -18,7 +18,7 @@ from xycar_msgs.msg import xycar_motor
 motor = None  # 모터 노드 변수
 Fix_Speed = 15  # 모터 속도 고정 상수값 
 new_angle = 0  # 모터 조향각 초기값
-new_speed = Fix_Speed  # 모터 속도 초기값
+new_speed = 0  # 모터 속도 초기값
 ultra_msg = None  # 초음파 데이터를 담을 변수
 motor_msg = xycar_motor()  # 모터 토픽 메시지
 
@@ -45,25 +45,47 @@ def sonic_drive():
     
     # 왼쪽 벽이 멀리 있으면, 왼쪽으로 주행
     if (ultra_msg[1] > ultra_msg[3]):
-        angle = -50
+        if ultra_msg[1] < 100:
+            angle = -10
+            speed = 30
+        elif ultra_msg[1] < 70:
+            angle = -20
+            speed = 20
+        elif ultra_msg[1] < 50
+            angle = -40
+            speed = 5
+        else:
+            angle = -90
+            speed = -10
 
     # 오른쪽 벽이 멀리 있으면, 오른쪽으로 주행
-    elif (ultra_msg[1] < ultra_msg[3]):
-        angle = 50
-
+    elif (ultra_msg[3] > ultra_msg[1]):
+        if ultra_msg[3] < 100:
+            angle = 10
+            speed = 30
+        elif ultra_msg[3] < 70:
+            angle = 20
+            speed = 20
+        elif ultra_msg[3] < 50
+            angle = 40
+            speed = 5
+        else:
+            angle = 90
+            speed = -10
     # 위 조건들에 해당하지 않는 경우라면 직진 주행
     else:
         angle = 0
+        speed = 23
 
     # angle 값을 반환
-    return angle
+    return angle,speed
 
 #=============================================
 # 실질적인 메인 함수 
 #=============================================
 def start():
     global motor
-    global Fix_Speed
+    # global Fix_Speed
     
     #=========================================
     # 노드를 생성하고, 구독/발행할 토픽들을 선언합니다.
@@ -86,7 +108,7 @@ def start():
 
         # 초음파 센서로 주행합니다.
         new_angle = sonic_drive()
-        new_speed = Fix_Speed
+        new_speed = sonic_drive()
         drive(new_angle, new_speed)        
 
 #=============================================

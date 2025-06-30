@@ -258,7 +258,7 @@ def start():
             
             # 아래 if 블럭에는 go_next가 True로 변경된 경우에만 들어갈 수 있습니다.
             if (go_next == True):                
-                stop_car(0.5)  # 차량을 멈춥니다.
+                # stop_car(0.5)  # 차량을 멈춥니다.
                 cv2.destroyAllWindows()  # OpenCV 창을 모두 닫습니다. 
                 drive_mode = SENSOR_DRIVE  # 다음 모드로 넘어갑니다.
                 cam_exposure(110)  # 카메라의 노출값을 적절하게 변경합니다.
@@ -282,7 +282,7 @@ def start():
             new_angle = ultradrive.sonic_drive(ultra_msg, new_angle)  
             
             # 주행 속도값을 세팅합니다. 
-            new_speed = 15
+            new_speed = ultradrive.sonic_drive(ultra_msg, new_angle)
 
             # 위에서 결정된 핸들값과 속도값을 토픽에 담아 모터로 보냅니다.
             drive(new_angle, new_speed)

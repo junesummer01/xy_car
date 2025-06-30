@@ -1,0 +1,12 @@
+<launch>
+
+  <!-- Motor node -->
+  <include file="$(find xycar_motor)/launch/xycar_motor.launch" />
+
+  <!-- USB Camera node -->
+  <include file="$(find usb_cam)/launch/xycar_cam.launch" />
+
+  <node name="driver" pkg="my_hough" type="hough_drive.py" output="screen"/>
+    <param name="speed" value="18" />
+
+</launch>
