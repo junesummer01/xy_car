@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 #=============================================
 # 카메라 데이터를 ROS에서 받아와 빨간색 라바콘(종이컵)을 인식하고
@@ -14,16 +14,12 @@ class UltraDriveCamera:
     def __init__(self):
         self.bridge = CvBridge()
         self.image = np.empty(shape=[0])
-        self.last_cx = 320 # 화면 중심 좌표
+        self.last_cx = 320  # 화면 중심 좌표
 
         self.motor_pub = rospy.Publisher('xycar_motor', xycar_motor, queue_size=1)
-        self.image_sub = rospy.Subscriber("/usb_cam/image_raw/", Image, self.usbcam_callback)
-        # --- 여기에서 rospy.init_node() 호출을 제거합니다! ---
-        # rospy.init_node('red_cone_vision_driver', anonymous=True) # <-- 이 줄을 삭제하거나 주석 처리하세요.
+        rospy.Subscriber("/usb_cam/image_raw/", Image, self.usbcam_callback)
+        rospy.init_node('red_cone_vision_driver', anonymous=True)
 
-        # UltraDriveCamera는 이미 main_controller 노드의 일부로 실행되므로,
-        # 노드 초기화를 다시 할 필요가 없습니다.
-        # 하지만 메시지 대기는 유용할 수 있습니다.
         rospy.wait_for_message("/usb_cam/image_raw/", Image)
         rospy.loginfo("Camera Ready --------------")
 
@@ -92,17 +88,8 @@ class UltraDriveCamera:
             rate.sleep()
 
 #=============================================
-# 프로그램 진입점 (이 부분은 UltraDriveCamera 단독 실행 시에만 유효)
+# 프로그램 진입점
 #=============================================
 if __name__ == "__main__":
-    # UltraDriveCamera를 MainController의 모듈로 사용하는 것이 아니라,
-    # 이 스크립트를 독립적인 ROS 노드로 실행하고 싶다면
-    # 여기에 rospy.init_node()를 배치해야 합니다.
-    # 하지만 현재 상황은 MainController 안에 포함되어 있으므로,
-    # 이 부분은 실행되지 않거나, 실행된다면 다른 문제가 될 수 있습니다.
-    # 일반적으로 모듈로 사용되는 파일의 if __name__ == "__main__": 블록은 비워두거나
-    # 해당 모듈 자체를 테스트하는 코드를 넣습니다.
-    
-    rospy.init_node('red_cone_vision_driver_standalone', anonymous=True) # 독립 실행 테스트용
     node = UltraDriveCamera()
     node.run()
