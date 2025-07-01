@@ -1,108 +1,21 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-#=============================================
-# 카메라 데이터를 ROS에서 받아와 빨간색 라바콘(종이컵)을 인식하고
-# 중심 위치를 기반으로 조향각과 속도를 결정하여 xycar_motor로 제어
-#=============================================
 
-import rospy, cv2, numpy as np
-from sensor_msgs.msg import Image
-from cv_bridge import CvBridge
-from xycar_msgs.msg import xycar_motor
+import rospy
+from dbscan_driver import HullClusterDriver # hull_cluster_driver.py 파일에서 HullClusterDriver 클래스를 가져옵니다.
 
-class UltraDriveCamera:
-    def __init__(self):
-        self.bridge = CvBridge()
-        self.image = np.empty(shape=[0])
-        self.last_cx = 320 # 화면 중심 좌표
-
-        self.motor_pub = rospy.Publisher('xycar_motor', xycar_motor, queue_size=1)
-        self.image_sub = rospy.Subscriber("/usb_cam/image_raw/", Image, self.usbcam_callback)
-        # --- 여기에서 rospy.init_node() 호출을 제거합니다! ---
-        # rospy.init_node('red_cone_vision_driver', anonymous=True) # <-- 이 줄을 삭제하거나 주석 처리하세요.
-
-        # UltraDriveCamera는 이미 main_controller 노드의 일부로 실행되므로,
-        # 노드 초기화를 다시 할 필요가 없습니다.
-        # 하지만 메시지 대기는 유용할 수 있습니다.
-        rospy.wait_for_message("/usb_cam/image_raw/", Image)
-        rospy.loginfo("Camera Ready --------------")
-
-    def usbcam_callback(self, data):
-        self.image = self.bridge.imgmsg_to_cv2(data, "bgr8")
-
-    def get_red_cone_center(self, frame):
-        hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
-
-        lower_red1 = np.array([0, 100, 100])
-        upper_red1 = np.array([10, 255, 255])
-        lower_red2 = np.array([160, 100, 100])
-        upper_red2 = np.array([180, 255, 255])
-
-        mask1 = cv2.inRange(hsv, lower_red1, upper_red1)
-        mask2 = cv2.inRange(hsv, lower_red2, upper_red2)
-        mask = cv2.bitwise_or(mask1, mask2)
-
-        contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-
-        if contours:
-            largest = max(contours, key=cv2.contourArea)
-            area = cv2.contourArea(largest)
-            if area > 300:
-                x, y, w, h = cv2.boundingRect(largest)
-                cx = x + w // 2
-                self.last_cx = cx
-                return cx
-
-        return self.last_cx
-
-    def vision_drive(self, frame):
-        cx = self.get_red_cone_center(frame)
-        frame_center = frame.shape[1] // 2
-        error = cx - frame_center
-
-        rospy.loginfo(f"[Vision] Red center: {cx} (error: {error})")
-
-        k = 0.2
-        angle = -k * error
-
-        speed = 5 if abs(error) < 40 else 30
-        angle = max(min(angle, 100.0), -100.0)
-
-        return angle, speed
-
-    def drive(self, angle, speed):
-        motor_msg = xycar_motor()
-        motor_msg.angle = angle
-        motor_msg.speed = speed
-        self.motor_pub.publish(motor_msg)
-
-    def run(self):
-        rate = rospy.Rate(10)
-        while not rospy.is_shutdown():
-            if self.image.size != 0:
-                angle, speed = self.vision_drive(self.image)
-                self.drive(angle, speed)
-
-                # 시각화 (선택 사항)
-                vis = self.image.copy()
-                cv2.line(vis, (vis.shape[1] // 2, 0), (vis.shape[1] // 2, vis.shape[0]), (255, 255, 255), 2)
-                cv2.circle(vis, (int(self.last_cx), vis.shape[0] // 2), 10, (0, 255, 0), -1)
-                cv2.imshow("Red Cone Detection", vis)
-                cv2.waitKey(1)
-            rate.sleep()
-
-#=============================================
-# 프로그램 진입점 (이 부분은 UltraDriveCamera 단독 실행 시에만 유효)
-#=============================================
 if __name__ == "__main__":
-    # UltraDriveCamera를 MainController의 모듈로 사용하는 것이 아니라,
-    # 이 스크립트를 독립적인 ROS 노드로 실행하고 싶다면
-    # 여기에 rospy.init_node()를 배치해야 합니다.
-    # 하지만 현재 상황은 MainController 안에 포함되어 있으므로,
-    # 이 부분은 실행되지 않거나, 실행된다면 다른 문제가 될 수 있습니다.
-    # 일반적으로 모듈로 사용되는 파일의 if __name__ == "__main__": 블록은 비워두거나
-    # 해당 모듈 자체를 테스트하는 코드를 넣습니다.
-    
-    rospy.init_node('red_cone_vision_driver_standalone', anonymous=True) # 독립 실행 테스트용
-    node = UltraDriveCamera()
-    node.run()
+    """
+    프로그램의 메인 실행 블록입니다.
+    """
+    try:
+        # HullClusterDriver 클래스의 인스턴스(객체)를 생성합니다.
+        # 이 시점에 __init__ 메소드가 호출되어 노드 초기화, 퍼블리셔/서브스크라이버 설정 등이 이루어집니다.
+        driver_node = HullClusterDriver()
+        
+        # run 메소드를 호출하여 메인 루프(영상 처리 및 주행 제어)를 시작합니다.
+        driver_node.run()
+        
+    except rospy.ROSInterruptException:
+        # Ctrl+C 등 ROS 노드가 중단될 때 발생하는 예외를 처리합니다.
+        pass
