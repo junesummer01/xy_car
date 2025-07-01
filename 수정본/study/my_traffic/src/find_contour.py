@@ -4,13 +4,15 @@
 #
 # FILE: hull_cluster_driver.py
 #
-# AUTHOR: JunHyungOH
+# AUTHOR: Gemini AI
 #
 # DESCRIPTION:
-#   [findContours를 이용한 라바콘 검출]
-#   DBSCAN 대신 cv2.findContours를 사용하여 라바콘을 검출합니다.
-#   이 방식은 파라미터에 덜 민감하고 노이즈 필터링이 용이하며, 더 빠르고 안정적입니다.
-#   검출된 라바콘의 중심점들을 polyfit하여 최종 곡선 경로를 생성합니다.
+#   [Graceful Model Degradation]
+#   검출된 라바콘의 개수에 따라 차선 모델을 유연하게 변경합니다.
+#   - 3개 이상: 2차 곡선 피팅 (가장 이상적)
+#   - 2개: 1차 직선 피팅 (안정성 확보)
+#   - 1개 이하: 유령 차선 로직 의존
+#   이를 통해 매우 넓은 간격의 라바콘 코스에서도 안정성을 유지합니다.
 #
 # =================================================================================
 
@@ -20,8 +22,6 @@ import numpy as np
 from sensor_msgs.msg import Image
 from cv_bridge import CvBridge
 from xycar_msgs.msg import xycar_motor
-# DBSCAN은 더 이상 사용하지 않음
-# from sklearn.cluster import DBSCAN 
 from collections import defaultdict
 
 class HullClusterDriver:
@@ -32,7 +32,7 @@ class HullClusterDriver:
         self.is_paused = False
         self.angle = 0
         self.last_error = 0
-        self.LANE_WIDTH = 400 
+        self.LANE_WIDTH = 400
 
         self.LEFT_LANE_COLOR = (0, 255, 255)
         self.RIGHT_LANE_COLOR = (255, 0, 255)
@@ -45,7 +45,7 @@ class HullClusterDriver:
         rospy.Subscriber("/usb_cam/image_raw/", Image, self.usbcam_callback)
 
         rospy.wait_for_message("/usb_cam/image_raw/", Image)
-        rospy.loginfo("HullClusterDriver (findContours) Started.")
+        rospy.loginfo("HullClusterDriver (Graceful Degradation) Started.")
 
     def usbcam_callback(self, data):
         try:
@@ -58,7 +58,7 @@ class HullClusterDriver:
 
     def get_lane_center(self, frame):
         h, w = frame.shape[:2]
-        roi_top_y = int(h * 0.58)
+        roi_top_y = int(h * 0.6)
 
         last_drive_path = np.poly1d(self.last_successful_coeffs)
 
@@ -67,59 +67,57 @@ class HullClusterDriver:
         cv2.fillPoly(mask, roi_vertices, 255)
         
         hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
-        lower_red1 = np.array([0, 60, 40])
-        upper_red1 = np.array([15, 255, 255])
-        lower_red2 = np.array([158, 36, 28])
-        upper_red2 = np.array([180, 255, 255])
+        lower_red1 = np.array([0, 60, 40]); upper_red1 = np.array([15, 255, 255])
+        lower_red2 = np.array([158, 36, 28]); upper_red2 = np.array([180, 255, 255])
         red_mask = cv2.bitwise_or(cv2.inRange(hsv, lower_red1, upper_red1), cv2.inRange(hsv, lower_red2, upper_red2))
         final_mask = cv2.bitwise_and(red_mask, red_mask, mask=mask)
 
-        # [핵심 변경 1] DBSCAN 대신 findContours 사용
         contours, _ = cv2.findContours(final_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
         
         all_centroids = []
         if contours:
-            # [핵심 변경 2] 면적 기준으로 노이즈 필터링 및 중심점 계산
             for contour in contours:
-                # 면적이 일정 크기 이상인 contour만 라바콘으로 간주
                 if cv2.contourArea(contour) > 50:
-                    # 무게 중심으로 중심점 계산
                     M = cv2.moments(contour)
                     if M["m00"] != 0:
-                        cx = int(M["m10"] / M["m00"])
-                        cy = int(M["m01"] / M["m00"])
+                        cx = int(M["m10"] / M["m00"]); cy = int(M["m01"] / M["m00"])
                         all_centroids.append((cx, cy))
-                        # 검출된 라바콘의 윤곽선 그리기 (디버깅용)
                         cv2.drawContours(self.image, [contour], -1, (0,255,0), 2)
 
         if len(all_centroids) < 2:
              is_path_detected = False
         else:
             all_centroids = np.array(all_centroids)
-            # 이전 경로를 기준으로 좌/우 중심점 분리
             dividing_line_x = np.polyval(last_drive_path, all_centroids[:, 1])
             left_centroids = all_centroids[all_centroids[:, 0] < dividing_line_x]
             right_centroids = all_centroids[all_centroids[:, 0] >= dividing_line_x]
 
             left_lane_coeffs, right_lane_coeffs = None, None
 
-            # ? [핵심 변경 3] 이제 DBSCAN 없이 중심점 리스트로 바로 모델링
-            if len(left_centroids) >= 2:
-                y_vals = left_centroids[:, 1]
-                x_vals = left_centroids[:, 0]
+            # ✨ [핵심] 왼쪽 차선 모델링 (점진적 저하)
+            if len(left_centroids) >= 3: # 점 3개 이상 -> 2차 곡선
+                y_vals = left_centroids[:, 1]; x_vals = left_centroids[:, 0]
                 left_lane_coeffs = np.polyfit(y_vals, x_vals, 2)
+            elif len(left_centroids) == 2: # 점 2개 -> 1차 직선
+                y_vals = left_centroids[:, 1]; x_vals = left_centroids[:, 0]
+                line_coeffs = np.polyfit(y_vals, x_vals, 1)
+                # 2차항 계수가 0인 2차 다항식으로 변환하여 데이터 형식 통일
+                left_lane_coeffs = np.insert(line_coeffs, 0, 0)
 
-            if len(right_centroids) >= 2:
-                y_vals = right_centroids[:, 1]
-                x_vals = right_centroids[:, 0]
+            # ✨ [핵심] 오른쪽 차선 모델링 (점진적 저하)
+            if len(right_centroids) >= 3: # 점 3개 이상 -> 2차 곡선
+                y_vals = right_centroids[:, 1]; x_vals = right_centroids[:, 0]
                 right_lane_coeffs = np.polyfit(y_vals, x_vals, 2)
+            elif len(right_centroids) == 2: # 점 2개 -> 1차 직선
+                y_vals = right_centroids[:, 1]; x_vals = right_centroids[:, 0]
+                line_coeffs = np.polyfit(y_vals, x_vals, 1)
+                right_lane_coeffs = np.insert(line_coeffs, 0, 0)
 
             center_path_coeffs = None
             y_range = np.arange(roi_top_y, h)
 
             if right_lane_coeffs is not None and left_lane_coeffs is not None:
-                left_fit = np.poly1d(left_lane_coeffs)
-                right_fit = np.poly1d(right_lane_coeffs)
+                left_fit = np.poly1d(left_lane_coeffs); right_fit = np.poly1d(right_lane_coeffs)
                 center_x_vals = (left_fit(y_range) + right_fit(y_range)) / 2
                 center_path_coeffs = np.polyfit(y_range, center_x_vals, 2)
             elif left_lane_coeffs is not None:
@@ -153,11 +151,11 @@ class HullClusterDriver:
         error = target_cx - frame_center
         k_p = 0.4; k_d = 0.6
         d_error = error - self.last_error
-        self.angle = (k_p * error) + (k_d * d_error)
+        self.angle = (-k_p * error) + (-k_d * d_error)
         self.last_error = error
-        if abs(self.angle) < 10: speed = 0
-        elif abs(self.angle) < 30: speed = 0
-        else: speed = 0
+        if abs(self.angle) < 10: speed = 35
+        elif abs(self.angle) < 30: speed = 20
+        else: speed = 15
         self.angle = max(min(self.angle, 100.0), -100.0)
         speed = max(min(speed, 50), 0)
         return self.angle, speed
